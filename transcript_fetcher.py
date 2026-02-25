@@ -4,6 +4,9 @@ from deep_translator import GoogleTranslator
 import re
 
 
+# -----------------------------
+# Extract Video ID
+# -----------------------------
 def get_video_id(url: str):
     parsed = urlparse(url)
 
@@ -17,34 +20,56 @@ def get_video_id(url: str):
         raise ValueError("Invalid YouTube URL")
 
 
+# -----------------------------
+# Clean text
+# -----------------------------
 def clean_text(text):
     text = text.replace("\n", " ")
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
+# -----------------------------
+# Fetch Transcript (NEW SAFE WAY)
+# -----------------------------
 def fetch_transcript(video_url: str):
 
     video_id = get_video_id(video_url)
 
+    # Try English first
     try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        transcript = YouTubeTranscriptApi.get_transcript(
+            video_id,
+            languages=["en"]
+        )
         language = "en"
+
+    # fallback → auto language
     except:
-        transcript = YouTubeTranscriptApi.list_transcripts(video_id)\
-            .find_transcript(['hi', 'ur']).fetch()
-        language = "other"
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        language = "auto"
 
     text = " ".join([t["text"] for t in transcript])
     text = clean_text(text)
 
+    # Translate if not English
     if language != "en":
         translator = GoogleTranslator(source="auto", target="en")
 
-        chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
-        text = " ".join(translator.translate(c) for c in chunks)
+        chunks = [
+            text[i:i + 4000]
+            for i in range(0, len(text), 4000)
+        ]
+
+        translated = [
+            translator.translate(chunk)
+            for chunk in chunks
+        ]
+
+        text = " ".join(translated)
 
     return {
         "video_id": video_id,
+        "language": language,
         "transcript": text
     }
