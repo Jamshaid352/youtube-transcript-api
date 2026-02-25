@@ -4,9 +4,9 @@ from deep_translator import GoogleTranslator
 import re
 
 
-# -------------------------
+# ---------------------------
 # Extract Video ID
-# -------------------------
+# ---------------------------
 def get_video_id(url):
     parsed_url = urlparse(url)
 
@@ -20,31 +20,28 @@ def get_video_id(url):
         raise ValueError("Invalid YouTube URL")
 
 
-# -------------------------
-# Clean Text
-# -------------------------
+# ---------------------------
+# Clean text
+# ---------------------------
 def clean_text(text):
     text = text.replace("\n", " ")
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
-# -------------------------
-# Fetch + Translate Transcript
-# -------------------------
+# ---------------------------
+# Fetch Transcript (COLAB VERSION)
+# ---------------------------
 def fetch_transcript(url):
 
     video_id = get_video_id(url)
-    ytt_api = YouTubeTranscriptApi()
 
-    language = "en"
+    ytt_api = YouTubeTranscriptApi()
 
     # Try English first
     try:
         transcript = ytt_api.fetch(video_id, languages=["en"])
         language = "en"
-
-    # fallback → Hindi or any available
     except:
         transcript = ytt_api.fetch(video_id)
         language = transcript.language_code
@@ -52,7 +49,7 @@ def fetch_transcript(url):
     text = " ".join([entry.text for entry in transcript])
     text = clean_text(text)
 
-    # Translate if NOT English
+    # Translate if not English
     if language != "en":
 
         translator = GoogleTranslator(
@@ -61,7 +58,7 @@ def fetch_transcript(url):
         )
 
         chunks = [
-            text[i:i + 4000]
+            text[i:i+4000]
             for i in range(0, len(text), 4000)
         ]
 
@@ -74,6 +71,6 @@ def fetch_transcript(url):
 
     return {
         "video_id": video_id,
-        "original_language": language,
+        "language": language,
         "transcript": text
     }
