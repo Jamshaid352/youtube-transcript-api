@@ -4,57 +4,61 @@ from deep_translator import GoogleTranslator
 import re
 
 
-# -----------------------------
+# -------------------------
 # Extract Video ID
-# -----------------------------
-def get_video_id(url: str):
-    parsed = urlparse(url)
+# -------------------------
+def get_video_id(url):
+    parsed_url = urlparse(url)
 
-    if "youtube.com" in parsed.netloc:
-        return parse_qs(parsed.query).get("v", [None])[0]
+    if "youtube.com" in parsed_url.netloc:
+        return parse_qs(parsed_url.query)["v"][0]
 
-    elif "youtu.be" in parsed.netloc:
-        return parsed.path.strip("/")
+    elif "youtu.be" in parsed_url.netloc:
+        return parsed_url.path.strip("/")
 
     else:
         raise ValueError("Invalid YouTube URL")
 
 
-# -----------------------------
-# Clean text
-# -----------------------------
+# -------------------------
+# Clean Text
+# -------------------------
 def clean_text(text):
     text = text.replace("\n", " ")
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
-# -----------------------------
-# Fetch Transcript (NEW SAFE WAY)
-# -----------------------------
-def fetch_transcript(video_url: str):
+# -------------------------
+# Fetch + Translate Transcript
+# -------------------------
+def fetch_transcript(url):
 
-    video_id = get_video_id(video_url)
+    video_id = get_video_id(url)
+    ytt_api = YouTubeTranscriptApi()
+
+    language = "en"
 
     # Try English first
     try:
-        transcript = YouTubeTranscriptApi.get_transcript(
-            video_id,
-            languages=["en"]
-        )
+        transcript = ytt_api.fetch(video_id, languages=["en"])
         language = "en"
 
-    # fallback → auto language
+    # fallback → Hindi or any available
     except:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        language = "auto"
+        transcript = ytt_api.fetch(video_id)
+        language = transcript.language_code
 
-    text = " ".join([t["text"] for t in transcript])
+    text = " ".join([entry.text for entry in transcript])
     text = clean_text(text)
 
-    # Translate if not English
+    # Translate if NOT English
     if language != "en":
-        translator = GoogleTranslator(source="auto", target="en")
+
+        translator = GoogleTranslator(
+            source="auto",
+            target="en"
+        )
 
         chunks = [
             text[i:i + 4000]
@@ -70,6 +74,6 @@ def fetch_transcript(video_url: str):
 
     return {
         "video_id": video_id,
-        "language": language,
+        "original_language": language,
         "transcript": text
     }
