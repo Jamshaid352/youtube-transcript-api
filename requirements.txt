@@ -1,5 +1,5 @@
 fastapi
 uvicorn
-youtube-transcript-api
-deep-translator
 python-multipart
+youtube-transcript-api==1.2.2
+deep-translator
